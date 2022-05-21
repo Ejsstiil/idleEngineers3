@@ -3,10 +3,11 @@ uid         = "Ejsstiil-Idle-Engineers3-v1"
 version     = 1
 copyright   = "Do whatever you want"
 description = [[
-Highlight working/Idle T1,T2,T3 Engineers and idle Factories.
+Highlight working/Idle T1,T2,T3 Engineers and idle Factories and Mexes
 Boosted performace - draws overlay only in visible space, no longer forgets to include captured engineers.]]
 author      = "Ejsstiil, idea camelCase"
 url         = "https://github.com/Ejsstiil/idleEngineers3"
+source      = "https://github.com/Ejsstiil/idleEngineers3"
 icon        = "/mods/idleEngineers3/mod_icon.png"
 selectable  = true
 exclusive   = false
@@ -24,8 +25,9 @@ after       = {}
 history = [[
 Idle Engineers 3
 ----------------
-
-# Version 1 (2022-05-16)
+# Version 1 (2022-05-21)
+ - added Mexes
+ - internal fixes
+# Version 0 (2022-05-16)
  - initial release
-
 ]]

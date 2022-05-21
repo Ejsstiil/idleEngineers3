@@ -1,9 +1,6 @@
-local Bitmap = import('/lua/maui/bitmap.lua').Bitmap
-local UIUtil = import('/lua/ui/uiutil.lua')
-local Util = import('/lua/utilities.lua')
-local LayoutHelpers = import('/lua/maui/layouthelpers.lua')
-local isGameUIHidden = function() return import('/lua/ui/game/gamemain.lua').gameUIHidden end
-----------------------
+local import = import
+local _G = _G
+local categories = categories
 local isObserver = IsObserver
 local sessionIsPaused = SessionIsPaused
 local gameTick = GameTick
@@ -11,9 +8,20 @@ local getFocusArmy = GetFocusArmy
 local uiSelectionByCategory = UISelectionByCategory
 local getSelectedUnits = GetSelectedUnits
 local isDestroyed = IsDestroyed
+local max = math.max
+local join = table.concat
+local sizeof = table.getsize
+local TrashBag = _G.TrashBag
+local TrashBagAdd = TrashBag.Add
+----------------------
+local Bitmap = import('/lua/maui/bitmap.lua').Bitmap
+local UIUtil = import('/lua/ui/uiutil.lua')
+local Util = import('/lua/utilities.lua')
+local LayoutHelpers = import('/lua/maui/layouthelpers.lua')
+local isGameUIHidden = function() return import('/lua/ui/game/gamemain.lua').gameUIHidden end
 ----------------------
 local LOG = function(...)
-    _G.LOG("-ie3-:", repr(arg))
+    --_G.LOG("-ie3-:", repr(arg)) -- just for debug
 end
 ----------------------
 local modPath = '/mods/idleEngineers3/'
@@ -26,10 +34,10 @@ local watchedCategories = {
     "FACTORY",
     "SUBCOMMANDER",
     "FIELDENGINEER",
-    "ENGINEERSTATION",
-    --"MASSEXTRACTION"
+    --"(POD * ENGINEER - ENGINEERSTATION)", -- too slow when crowding them
+    "MASSEXTRACTION"
 }
-local ovParams = { label = "", size = 0, offset = 0 }
+local categString = join(watchedCategories, ', ')
 local overlays = {}
 local bgColor = 'FF000000' --argb
 local colorIdle = 'ffff0400'
@@ -52,7 +60,7 @@ function _selectAppropriate()
         Select.Hidden(function()
             --function INFO: UISelectionByCategory(expression, addToCurSel, inViewFrustum, nearestToMouse, mustBeIdle)
             --UISelectionByCategory("LAND ENGINEER, FACTORY, SUBCOMMANDER, FIELDENGINEER, ENGINEERSTATION, MASSEXTRACTION", false, true, false, false)
-            uiSelectionByCategory(table.concat(watchedCategories, ', '), false, false, false, false)
+            uiSelectionByCategory(categString, false, false, false, false)
             local un = getSelectedUnits() or {}
             for _, u in un do
                 all_units[u:GetEntityId()] = u
@@ -60,25 +68,26 @@ function _selectAppropriate()
         end)
         --LOG("in table:" .. table.getn(all_units))
         --table.print(all_units)
-        UpdateUnits()
+        ManageOverlays()
     else
-        TearDown()
+        TearDown(overlays)
     end
 end
 
-function UpdateUnits()
-    for i, u in all_units do
-        if (isDestroyed(u)) then
-            DestroyOverlay(i)
-            all_units[i] = nil
-        else
-            if not overlays[i] then
-                CreateOverlay(i, u)
+function ManageOverlays()
+    ForkThread(function()
+        for i, u in all_units do
+            if (isDestroyed(u)) then
+                DestroyOverlay(i)
+                all_units[i] = nil
+            else
+                if not overlays[i] then
+                    CreateOverlay(i, u)
+                end
             end
         end
-    end
-    --table.print(overlays)
-
+        --table.print(overlays)
+    end)
     --for teardown
     _G[globalsKey] = {}
     _G[globalsKey].overlays = overlays
@@ -98,7 +107,7 @@ function CreateOverlay(i, u)
 
     --reprsl(overlays[i])
 
-    LOG(table.getsize(overlays))
+    LOG(sizeof(overlays))
 end
 
 function DestroyOverlay(i)
@@ -110,7 +119,7 @@ end
 function _removeOverlay(i)
     LOG('remove layer ' .. i)
     overlays[i] = nil
-    LOG(table.getsize(overlays))
+    LOG(sizeof(overlays))
 end
 
 --[[function updateArmyTotals()
@@ -133,13 +142,14 @@ function GetTechLevelString(bp)
     elseif EntityCategoryContains(categories.TECH3, bp.BlueprintId) then
         return 3
     else
-        return false
+        return 4
     end
 end
 
 function myGetTechLevelString(bp)
+    local ovParams = { label = "", size = 0, offset = 0, bgColor = bgColor, color = colorIdle }
     local tech = GetTechLevelString(bp)
-    ovParams.label = ''
+    ovParams.label = '?'
     ovParams.size = tech
     ovParams.offset = 0
     if EntityCategoryContains(categories.COMMAND, bp.BlueprintId) then
@@ -147,18 +157,23 @@ function myGetTechLevelString(bp)
         ovParams.size = 2
     elseif EntityCategoryContains(categories.SUBCOMMANDER, bp.BlueprintId) then
         ovParams.label = 'S'
+        ovParams.size = 4
+    elseif EntityCategoryContains(categories.EXPERIMENTAL * categories.FACTORY, bp.BlueprintId) then
+        ovParams.label = '▼'
+        ovParams.size = 4
     elseif EntityCategoryContains(categories.FACTORY, bp.BlueprintId) then
         ovParams.label = 'FAC'
         ovParams.offset = 10
     elseif EntityCategoryContains(categories.FIELDENGINEER, bp.BlueprintId) then
-        ovParams.label = 'f'
-        --elseif EntityCategoryContains(categories.MASSEXTRACTION, bp.BlueprintId) then
-        --    label = 'M'
+        ovParams.label = 'F'
     elseif EntityCategoryContains(categories.ENGINEER, bp.BlueprintId) then
         ovParams.size = tech
         ovParams.label = tech
+    elseif EntityCategoryContains(categories.MASSEXTRACTION, bp.BlueprintId) then
+        ovParams.label = 'X'
+        ovParams.offset = -1
+        ovParams.color = 'EE00FF00'
     end
-    if ovParams.label == '' then ovParams.label = 'E' end
 
     return ovParams
 end
@@ -176,36 +191,43 @@ function _CreateUnitOverlay(unit, overlayId)
     local worldView = import('/lua/ui/game/worldview.lua').GetWorldViews()['WorldCamera']
     local overlay = Bitmap(GetFrame(0))
     local ovParams = myGetTechLevelString(unit:GetBlueprint())
-    local Max = math.max
+
+    --print(repr(unit))
 
     overlay.destroy = false
-    overlay:SetSolidColor(bgColor) -- color of overlay background
+    overlay:SetSolidColor(ovParams.bgColor) -- color of overlay background
     overlay:SetAlpha(.8)
     overlay:DisableHitTest()
+    overlay:SetFrameRate(0)
+    overlay:SetFramePattern({ 0 })
     overlay:SetNeedsFrameUpdate(true)
     overlay.unit = unit
     overlay.id = unit:GetEntityId()
     overlay.time = 0
 
-    overlay.text = UIUtil.CreateText(overlay, '0', 7 + ovParams.size, UIUtil.fixedFont, true)
+    overlay.text = UIUtil.CreateText(overlay, '0', 6 + ovParams.size, UIUtil.fixedFont, true)
     overlay.text:SetText(ovParams.label)
 
-    overlay.Width:Set(function() return Max(overlay.text.Width() + (1.5 * ovParams.size), 8) end)
+    overlay.Width:Set(function() return max(overlay.text.Width() + (1.5 * ovParams.size), 8) end)
     overlay.Height:Set(function() return 10 + (0.5 * ovParams.size) end)
 
     LayoutHelpers.AtCenterIn(overlay.text, overlay, 0, 0)
 
     overlay.OnFrame = function(self, delta)
-        if sessionIsPaused() then return end
+        local selfUnit = self.unit
+        if sessionIsPaused() then
+            self:Hide()
+            return
+        end
         local removeExternals = _removeOverlay
 
         self.time = self.time + delta
 
-        if isDestroyed(unit) or self.destroy then
+        if isDestroyed(selfUnit) or self.destroy then
             self:Hide()
             self:SetNeedsFrameUpdate(false)
             removeExternals(self.id)
-            self = nil
+            --self = nil
             return
         end
 
@@ -213,8 +235,7 @@ function _CreateUnitOverlay(unit, overlayId)
             worldView = import('/lua/ui/game/worldview.lua').GetWorldViews()['WorldCamera']
         end
 
-        local ScreenPos = worldView:GetScreenPos(unit)
-        if not ScreenPos or isObserver() or isGameUIHidden() then
+        if not worldView:GetScreenPos(selfUnit) or isObserver() or isGameUIHidden() then
             self.time = 0
             self:Hide()
             return
@@ -224,11 +245,11 @@ function _CreateUnitOverlay(unit, overlayId)
             end
         end
 
-        if not unit:IsDead() and not isDestroyed(self.unit) then
+        if not selfUnit:IsDead() and not isDestroyed(selfUnit) then
             --table.print(ScreenPos)
 
-            local vec = unit:GetPosition()
-            local pos = worldView:Project({ vec[1], vec[2] * 1.05, vec[3] })
+            local vec = selfUnit:GetPosition()
+            local pos = worldView:Project({ vec[1], vec[2] * 1.025, vec[3] })
             self.Left:Set(function()
                 return worldView.Left() + pos.x - self.Width() / 2
             end)
@@ -241,8 +262,8 @@ function _CreateUnitOverlay(unit, overlayId)
             --self.Left:Set(ScreenPos[1] - self.Width() / 2)
             --self.Top:Set((ScreenPos[2] - self.Height() / 2 - 2) - offset)
 
-            if unit:IsIdle() then
-                self.text:SetColor(colorIdle)
+            if selfUnit:IsIdle() then
+                self.text:SetColor(ovParams.color)
             else
                 self.text:SetColor('white')
             end
@@ -254,10 +275,12 @@ function _CreateUnitOverlay(unit, overlayId)
     return overlay
 end
 
-function TearDown()
-    for i, u in overlays do
+function TearDown(ovs)
+    for i, u in ovs do
         DestroyOverlay(i)
     end
+    overlays = {}
+    _G[globalsKey].overlays = overlays
 end
 
 function OnChangeDetected()
@@ -265,11 +288,7 @@ function OnChangeDetected()
         LOG("iE3-OnChangeDetected")
         --teardown
         if rawget(_G, "ie3") ~= nil then
-            overlays = _G[globalsKey].overlays
-            for i, u in overlays do
-                DestroyOverlay(i)
-            end
-            _G[globalsKey].overlays = {}
+            TearDown(_G[globalsKey].overlays)
         end
 
     end)
@@ -277,3 +296,4 @@ function OnChangeDetected()
 end
 
 OnChangeDetected()
+--LOG(repr(debug.listcode(_CreateUnitOverlay)))

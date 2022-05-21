@@ -5,7 +5,7 @@ function CreateUI(isReplay)
     oldCreateUI(isReplay)
 
     AddBeatFunction(function()
-        import(modPath .. 'modules/units.lua').OnBeat()
+        import(modPath .. 'modules/main.lua').OnBeat()
     end)
 end
 
@@ -29,3 +29,19 @@ end
 
 --[[------------------------------------------------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------------------------------------------]]
+if false then
+    ForkThread(function()
+        WaitSeconds(5)
+        CreateUnitAtMouse('urb4206', 0, -8.65, -2.15, 0.00000)
+        CreateUnitAtMouse('urb4204', 0, 1.35, 3.85, 0.00000)
+        CreateUnitAtMouse('urb1301', 0, -5.65, 4.85, 0.00000)
+        CreateUnitAtMouse('urb3101', 0, 0.35, -0.15, 0.00000)
+        CreateUnitAtMouse('urb0101', 0, -1.65, -6.15, 0.00000)
+        CreateUnitAtMouse('url0105', 0, -5.28, -1.67, 1.49915)
+        CreateUnitAtMouse('urb3201', 0, 5.35, -1.15, 0.00000)
+        CreateUnitAtMouse('url0208', 0, -1.26, -1.66, 1.55829)
+        CreateUnitAtMouse('xeb0104', 0, 6.35, 2.85, 0.00000)
+        CreateUnitAtMouse('xea3204', 0, 6.35, 3.04, 0.00000)
+        CreateUnitAtMouse('url0309', 0, 2.72, -1.67, 1.52960)
+    end)
+end
