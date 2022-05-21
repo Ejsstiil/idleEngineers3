@@ -1,8 +1,9 @@
+
 # idle Engineers 3
+![Idle enginers 2](./images/idleEngineers.png)
+![Idle enginers 3](./mod_icon.png)
+
 This is a reworked and improved version of one of my favourite mod for Supreme Commander: Forged Alliance Forever [(FAF)](https://github.com/FAForever/fa) - **Idle Enginers 2**
-
-![Idle enginers 2](./mod_icon.png)
-
 
 ## Why remake? 
 The latest version is from 2016, based on information from [FAF's](https://www.faforever.com) Mod Vault. It also suffers from some bugs, like not marks a captured engineers, does not follow switching army (eq. upon replays) etc. and is no longer maintained. At least what I know. And  due to some changes in score data in FAF, like counting units, it even shouldn't work anymore!

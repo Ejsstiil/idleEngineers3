@@ -11,8 +11,8 @@ local isDestroyed = IsDestroyed
 local max = math.max
 local join = table.concat
 local sizeof = table.getsize
-local TrashBag = _G.TrashBag
-local TrashBagAdd = TrashBag.Add
+local str_repeat = string.rep
+local EntityCategoryContains = EntityCategoryContains
 ----------------------
 local Bitmap = import('/lua/maui/bitmap.lua').Bitmap
 local UIUtil = import('/lua/ui/uiutil.lua')
@@ -20,8 +20,11 @@ local Util = import('/lua/utilities.lua')
 local LayoutHelpers = import('/lua/maui/layouthelpers.lua')
 local isGameUIHidden = function() return import('/lua/ui/game/gamemain.lua').gameUIHidden end
 ----------------------
+local debug = false
 local LOG = function(...)
-    --_G.LOG("-ie3-:", repr(arg)) -- just for debug
+    if debug then
+        _G.LOG("-ie3-:", repr(arg)) -- just for debug
+    end
 end
 ----------------------
 local modPath = '/mods/idleEngineers3/'
@@ -41,6 +44,7 @@ local categString = join(watchedCategories, ', ')
 local overlays = {}
 local bgColor = 'FF000000' --argb
 local colorIdle = 'ffff0400'
+local colorWorking = 'ffffffff'
 
 function OnBeat()
     if sessionIsPaused() then return end
@@ -87,10 +91,12 @@ function ManageOverlays()
             end
         end
         --table.print(overlays)
+        if debug then
+            --for teardown, copy to globals
+            _G[globalsKey] = {}
+            _G[globalsKey].overlays = overlays
+        end
     end)
-    --for teardown
-    _G[globalsKey] = {}
-    _G[globalsKey].overlays = overlays
 end
 
 function CreateOverlay(i, u)
@@ -147,11 +153,9 @@ function GetTechLevelString(bp)
 end
 
 function myGetTechLevelString(bp)
-    local ovParams = { label = "", size = 0, offset = 0, bgColor = bgColor, color = colorIdle }
     local tech = GetTechLevelString(bp)
-    ovParams.label = '?'
-    ovParams.size = tech
-    ovParams.offset = 0
+    local ovParams = { label = "?", size = tech, offsetTop = 0, groundHeight = 1.025, bgColor = bgColor,
+    colorIdle = colorIdle, colorWorking = colorWorking }
     if EntityCategoryContains(categories.COMMAND, bp.BlueprintId) then
         ovParams.label = 'A'
         ovParams.size = 2
@@ -163,16 +167,18 @@ function myGetTechLevelString(bp)
         ovParams.size = 4
     elseif EntityCategoryContains(categories.FACTORY, bp.BlueprintId) then
         ovParams.label = 'FAC'
-        ovParams.offset = 10
+        ovParams.offsetTop = 10
     elseif EntityCategoryContains(categories.FIELDENGINEER, bp.BlueprintId) then
         ovParams.label = 'F'
+        ovParams.groundHeight = 1.01
     elseif EntityCategoryContains(categories.ENGINEER, bp.BlueprintId) then
         ovParams.size = tech
         ovParams.label = tech
+        ovParams.groundHeight = (tech * 0.005) + 1 -- ground height by tech
     elseif EntityCategoryContains(categories.MASSEXTRACTION, bp.BlueprintId) then
-        ovParams.label = 'X'
-        ovParams.offset = -1
-        ovParams.color = 'EE00FF00'
+        ovParams.label = str_repeat("I", tech)
+        ovParams.colorIdle = 'ff00FF00' -- means normal operation
+        ovParams.colorWorking = 'ffff00e1' -- means upgrading
     end
 
     return ovParams
@@ -223,8 +229,9 @@ function _CreateUnitOverlay(unit, overlayId)
 
         self.time = self.time + delta
 
-        if isDestroyed(selfUnit) or self.destroy then
+        if isDestroyed(selfUnit) or self.destroy or not selfUnit:GetBlueprint() then
             self:Hide()
+            self.destroy = true
             self:SetNeedsFrameUpdate(false)
             removeExternals(self.id)
             --self = nil
@@ -249,12 +256,12 @@ function _CreateUnitOverlay(unit, overlayId)
             --table.print(ScreenPos)
 
             local vec = selfUnit:GetPosition()
-            local pos = worldView:Project({ vec[1], vec[2] * 1.025, vec[3] })
+            local pos = worldView:Project({ vec[1], vec[2] * ovParams.groundHeight, vec[3] })
             self.Left:Set(function()
                 return worldView.Left() + pos.x - self.Width() / 2
             end)
             self.Top:Set(function()
-                return (worldView.Top() + pos.y - self.Height() / 2 - 2) - ovParams.offset
+                return (worldView.Top() + pos.y - self.Height() / 2 - 2) - ovParams.offsetTop
             end)
 
             --print(ScreenPos[1])
@@ -263,9 +270,9 @@ function _CreateUnitOverlay(unit, overlayId)
             --self.Top:Set((ScreenPos[2] - self.Height() / 2 - 2) - offset)
 
             if selfUnit:IsIdle() then
-                self.text:SetColor(ovParams.color)
+                self.text:SetColor(ovParams.colorIdle)
             else
-                self.text:SetColor('white')
+                self.text:SetColor(ovParams.colorWorking)
             end
         end
 
@@ -275,12 +282,15 @@ function _CreateUnitOverlay(unit, overlayId)
     return overlay
 end
 
-function TearDown(ovs)
-    for i, u in ovs do
+function TearDown()
+    for i, u in overlays do
         DestroyOverlay(i)
     end
     overlays = {}
-    _G[globalsKey].overlays = overlays
+    if debug then
+        table.print(overlays)
+        _G[globalsKey].overlays = {}
+    end
 end
 
 function OnChangeDetected()
@@ -288,7 +298,9 @@ function OnChangeDetected()
         LOG("iE3-OnChangeDetected")
         --teardown
         if rawget(_G, "ie3") ~= nil then
-            TearDown(_G[globalsKey].overlays)
+            for i, u in _G[globalsKey].overlays do
+                _G[globalsKey].overlays[i].destroy = true
+            end
         end
 
     end)
