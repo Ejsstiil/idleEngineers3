@@ -1,6 +1,6 @@
 name        = "Idle Engineers 3"
 uid         = "Ejsstiil-Idle-Engineers3-v3"
-version     = 3
+version     = 4
 copyright   = "Do whatever you want"
 description = "Highlight working/Idle T1,T2,T3,T4 Engineers, idle Factories, Mexes. Boosted performace, supports replays, split screen, light on the UI game engine and more."
 author      = "Ejsstiil, idea camelCase"
@@ -25,6 +25,8 @@ after       = {}
 history = [[
 Idle Engineers 3
 ----------------
+# Version 4 (2022-05-23)
+ - add different color representation when ingeneer is assisting but idle
 # Version 3 (2022-05-21)
  - improved mex overlay
  - wrapped debug functionality

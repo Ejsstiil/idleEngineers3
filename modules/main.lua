@@ -16,7 +16,6 @@ local EntityCategoryContains = EntityCategoryContains
 ----------------------
 local Bitmap = import('/lua/maui/bitmap.lua').Bitmap
 local UIUtil = import('/lua/ui/uiutil.lua')
-local Util = import('/lua/utilities.lua')
 local LayoutHelpers = import('/lua/maui/layouthelpers.lua')
 local isGameUIHidden = function() return import('/lua/ui/game/gamemain.lua').gameUIHidden end
 ----------------------
@@ -43,7 +42,9 @@ local watchedCategories = {
 local categString = join(watchedCategories, ', ')
 local overlays = {}
 local bgColor = 'FF000000' --argb
-local colorIdle = 'ffff0400'
+local colorIdle = 'ffff0000'
+local colorIdleNoProgress = 'ffFF5500' -- idling and also doing nothing, eq. not reclaiming
+local colorWorkingNoProgress = 'ffff6600' --helping but doing nothing
 local colorWorking = 'ffffffff'
 
 function OnBeat()
@@ -220,7 +221,7 @@ function _CreateUnitOverlay(unit, overlayId)
     LayoutHelpers.AtCenterIn(overlay.text, overlay, 0, 0)
 
     overlay.OnFrame = function(self, delta)
-        local selfUnit = self.unit
+
         if sessionIsPaused() then
             self:Hide()
             return
@@ -229,7 +230,7 @@ function _CreateUnitOverlay(unit, overlayId)
 
         self.time = self.time + delta
 
-        if isDestroyed(selfUnit) or self.destroy or not selfUnit:GetBlueprint() then
+        if isDestroyed(self.unit) or self.destroy or not self.unit:GetBlueprint() or self.unit:IsDead() then
             self:Hide()
             self.destroy = true
             self:SetNeedsFrameUpdate(false)
@@ -242,7 +243,7 @@ function _CreateUnitOverlay(unit, overlayId)
             worldView = import('/lua/ui/game/worldview.lua').GetWorldViews()['WorldCamera']
         end
 
-        if not worldView:GetScreenPos(selfUnit) or isObserver() or isGameUIHidden() then
+        if not worldView:GetScreenPos(self.unit) or isObserver() or isGameUIHidden() then
             self.time = 0
             self:Hide()
             return
@@ -252,10 +253,10 @@ function _CreateUnitOverlay(unit, overlayId)
             end
         end
 
-        if not selfUnit:IsDead() and not isDestroyed(selfUnit) then
+        if not self.unit:IsDead() and not isDestroyed(self.unit) then
             --table.print(ScreenPos)
 
-            local vec = selfUnit:GetPosition()
+            local vec = self.unit:GetPosition()
             local pos = worldView:Project({ vec[1], vec[2] * ovParams.groundHeight, vec[3] })
             self.Left:Set(function()
                 return worldView.Left() + pos.x - self.Width() / 2
@@ -268,11 +269,22 @@ function _CreateUnitOverlay(unit, overlayId)
 
             --self.Left:Set(ScreenPos[1] - self.Width() / 2)
             --self.Top:Set((ScreenPos[2] - self.Height() / 2 - 2) - offset)
-
-            if selfUnit:IsIdle() then
-                self.text:SetColor(ovParams.colorIdle)
+            local progress = self.unit:GetWorkProgress()
+            local idle = self.unit:IsIdle()
+            local mode = self.unit:IsAutoMode()
+            if idle == true then
+                --print(progress, self.unit:GetBlueprint().BlueprintId, mode)
+                if progress == 0 then
+                    self.text:SetColor(ovParams.colorIdle)
+                else
+                    self.text:SetColor(colorIdleNoProgress)
+                end
             else
-                self.text:SetColor(ovParams.colorWorking)
+                if progress == 0 then
+                    self.text:SetColor(colorWorkingNoProgress)
+                else
+                    self.text:SetColor(ovParams.colorWorking)
+                end
             end
         end
 
