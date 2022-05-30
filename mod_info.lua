@@ -1,6 +1,6 @@
 name        = "Idle Engineers 3"
-uid         = "Ejsstiil-Idle-Engineers3-v3"
-version     = 4
+uid         = "Ejsstiil-Idle-Engineers3-v5"
+version     = 5
 copyright   = "Do whatever you want"
 description = "Highlight working/Idle T1,T2,T3,T4 Engineers, idle Factories, Mexes. Boosted performace, supports replays, split screen, light on the UI game engine and more."
 author      = "Ejsstiil, idea camelCase"
@@ -18,6 +18,8 @@ conflicts   = {
     "idle-engineers-light-v07", --          -- Idle Engineers Light (4z0t)
     "Ejsstiil-Idle-Engineers3-v1",
     "Ejsstiil-Idle-Engineers3-v2",
+    "Ejsstiil-Idle-Engineers3-v3",
+    "Ejsstiil-Idle-Engineers3-v4",
 }
 before      = {}
 after       = {}
@@ -25,6 +27,11 @@ after       = {}
 history = [[
 Idle Engineers 3
 ----------------
+# Version 5 (2022-05-30)
+ - refactoring code
+ - fixed some bugs
+ - make compatible with UI-party
+ - delayed start, should no more deseselct ACU upon spawning
 # Version 4 (2022-05-23)
  - add different color representation when ingeneer is assisting but idle
 # Version 3 (2022-05-21)
