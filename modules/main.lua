@@ -232,7 +232,6 @@ local function manageOverlays(units)
 end
 
 local function selectAppropriate()
-    print('select')
     if getFocusArmy() > 0 then
         local units = {}
         Select.Hidden(function()
