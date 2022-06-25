@@ -1,6 +1,6 @@
 name        = "Idle Engineers 3"
-uid         = "Ejsstiil-Idle-Engineers3-v6"
-version     = 6
+uid         = "Ejsstiil-Idle-Engineers3-v7"
+version     = 7
 copyright   = "Do whatever you want"
 description = "Highlight working/Idle T1,T2,T3,T4 Engineers, idle Factories, Mexes. Boosted performace, supports replays, split screen, light on the UI game engine and more."
 author      = "Ejsstiil, idea camelCase"
@@ -21,6 +21,7 @@ conflicts   = {
     "Ejsstiil-Idle-Engineers3-v3",
     "Ejsstiil-Idle-Engineers3-v4",
     "Ejsstiil-Idle-Engineers3-v5",
+    "Ejsstiil-Idle-Engineers3-v6",
 }
 before      = {}
 after       = {}
@@ -28,6 +29,8 @@ after       = {}
 history = [[
 Idle Engineers 3
 ----------------
+# Version 7 (2022-05-30)
+ - changed color of patroling to be more distinguishable
 # Version 6 (2022-05-30)
  - removed print
 # Version 5 (2022-05-30)

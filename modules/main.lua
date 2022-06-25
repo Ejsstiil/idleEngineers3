@@ -44,7 +44,7 @@ local overlays = {}
 local bgColor = 'FF000000' --argb
 local colorIdle = 'ffff0000'
 local colorIdleNoProgress = 'ffFF5500' -- idling and also doing nothing, eq. not reclaiming
-local colorWorkingNoProgress = 'ffff6600' --helping but doing nothing
+local colorWorkingNoProgress = 'ff759bff' --helping but doing nothing
 local colorWorking = 'ffffffff'
 
 ----------------------------
